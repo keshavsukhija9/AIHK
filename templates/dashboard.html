@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Algorithm Comparison Dashboard - Bengaluru House Price Predictor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .nav-buttons {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .full-width-card {
+            grid-column: 1 / -1;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .rank-1 { background: #ffd700; color: #333; font-weight: bold; }
+        .rank-2 { background: #c0c0c0; color: #333; font-weight: bold; }
+        .rank-3 { background: #cd7f32; color: #333; font-weight: bold; }
+
+        .status-good { color: #28a745; font-weight: bold; }
+        .status-caution { color: #ffc107; font-weight: bold; }
+        .status-overfitted { color: #dc3545; font-weight: bold; }
+
+        .performance-excellent { background: #d4edda; color: #155724; }
+        .performance-very-good { background: #d1ecf1; color: #0c5460; }
+        .performance-good { background: #fff3cd; color: #856404; }
+        .performance-needs-work { background: #f8d7da; color: #721c24; }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .chart-placeholder {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            color: #6c757d;
+            margin: 20px 0;
+        }
+
+        .performance-bar {
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .performance-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-table {
+                font-size: 0.8rem;
+            }
+            
+            .comparison-table th,
+            .comparison-table td {
+                padding: 8px 4px;
+            }
+        }
+
+        .insights-section {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .insights-section h4 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+
+        .insight-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> ML Algorithm Comparison Dashboard</h1>
+            <p>Comprehensive analysis of machine learning models for house price prediction</p>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="/" class="nav-btn">
+                <i class="fas fa-home"></i> Back to Predictor
+            </a>
+            <button onclick="refreshData()" class="nav-btn">
+                <i class="fas fa-sync-alt"></i> Refresh Data
+            </button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Summary Cards -->
+            <div class="card full-width-card">
+                <h2><i class="fas fa-tachometer-alt"></i> Performance Summary</h2>
+                <div class="summary-cards" id="summaryCards">
+                    <!-- Summary cards will be populated here -->
+                </div>
+            </div>
+
+            <!-- Algorithm Comparison Table -->
+            <div class="card full-width-card">
+                <h2><i class="fas fa-table"></i> Comprehensive Algorithm Comparison (Test Data Only)</h2>
+                <div id="comparisonContent">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading algorithm comparison data...</p>
+                    </div>
+                </div>
+                
+                <div class="insights-section">
+                    <h4><i class="fas fa-lightbulb"></i> Key Insights</h4>
+                    <div id="insights">
+                        <div class="insight-item">
+                            <strong>Test Data Validation:</strong> All performance metrics calculated exclusively on unseen test data to ensure realistic evaluation.
+                        </div>
+                        <div class="insight-item">
+                            <strong>Overfitting Detection:</strong> Models with CV-Test gap > 0.05 are flagged as potentially overfitted.
+                        </div>
+                        <div class="insight-item">
+                            <strong>Real Estate Context:</strong> R² scores of 65-85% are considered excellent for house price prediction.
+                        </div>
+                        <div class="insight-item">
+                            <strong>MAPE Interpretation:</strong> Mean Absolute Percentage Error < 20% indicates good predictive accuracy.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Visualization -->
+            <div class="card">
+                <h2><i class="fas fa-chart-bar"></i> Performance Visualization</h2>
+                <div id="performanceChart">
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-bar" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <p>Performance chart will be generated after data loads</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Recommendations -->
+            <div class="card">
+                <h2><i class="fas fa-recommendations"></i> Model Recommendations</h2>
+                <div id="recommendations">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Generating recommendations...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="error" id="errorMessage">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorText">An error occurred while loading data.</span>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let comparisonData = null;
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAlgorithmComparison();
+        });
+
+        function loadAlgorithmComparison() {
+            showLoading();
+            hideError();
+
+            fetch('/algorithm-comparison')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        comparisonData = data;
+                        displayComparisonData(data);
+                        displaySummaryCards(data.summary);
+                        displayPerformanceChart(data.comparison_data);
+                        displayRecommendations(data);
+                    } else {
+                        showError(data.error || 'Failed to load algorithm comparison data');
+                    }
+                })
+                .catch(error => {
+                    showError('Network error: ' + error.message);
+                });
+        }
+
+        function displaySummaryCards(summary) {
+            const summaryCards = document.getElementById('summaryCards');
+            summaryCards.innerHTML = `
+                <div class="summary-card">
+                    <h3>${summary.total_models}</h3>
+                    <p>Total Models</p>
+                </div>
+                <div class="summary-card">
+                    <h3>${summary.best_r2}</h3>
+                    <p>Best R² Score</p>
+                </div>
+                <div class="summary-card">
+                    <h3>${summary.avg_r2}</h3>
+                    <p>Average R² Score</p>
+                </div>
+                <div class="summary-card">
+                    <h3>${summary.overfitted_count}</h3>
+                    <p>Overfitted Models</p>
+                </div>
+                <div class="summary-card">
+                    <h3>${summary.best_model.replace('Neural Network ', 'NN ')}</h3>
+                    <p>Best Model</p>
+                </div>
+            `;
+        }
+
+        function displayComparisonData(data) {
+            const comparisonContent = document.getElementById('comparisonContent');
+            
+            let tableHTML = `
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Model</th>
+                            <th>Type</th>
+                            <th>Test R²</th>
+                            <th>Test RMSE (₹L)</th>
+                            <th>Test MAE (₹L)</th>
+                            <th>Test MAPE (%)</th>
+                            <th>CV Mean</th>
+                            <th>Overfitting Gap</th>
+                            <th>Status</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.comparison_data.forEach(model => {
+                const rankClass = model.ranking <= 3 ? `rank-${model.ranking}` : '';
+                const statusClass = model.status === 'Good' ? 'status-good' : 
+                                   model.status === 'Caution' ? 'status-caution' : 'status-overfitted';
+                const performanceClass = `performance-${model.rank.toLowerCase().replace(' ', '-')}`;
+
+                tableHTML += `
+                    <tr>
+                        <td class="${rankClass}">${model.ranking}</td>
+                        <td><strong>${model.model_name.replace('Neural Network ', 'NN ')}</strong></td>
+                        <td>${model.model_type}</td>
+                        <td><strong>${model.test_r2}</strong></td>
+                        <td>₹${model.test_rmse}L</td>
+                        <td>₹${model.test_mae}L</td>
+                        <td>${model.test_mape}%</td>
+                        <td>${model.cv_mean} (±${model.cv_std})</td>
+                        <td>${model.overfitting_gap}</td>
+                        <td class="${statusClass}"><i class="fas fa-circle"></i> ${model.status}</td>
+                        <td class="${performanceClass}">${model.rank}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            comparisonContent.innerHTML = tableHTML;
+        }
+
+        function displayPerformanceChart(models) {
+            const chartContainer = document.getElementById('performanceChart');
+            
+            let chartHTML = '<div style="margin: 20px 0;">';
+            
+            models.slice(0, 5).forEach(model => {
+                const percentage = (model.test_r2 * 100).toFixed(1);
+                chartHTML += `
+                    <div style="margin: 15px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span><strong>${model.model_name.replace('Neural Network ', 'NN ')}</strong></span>
+                            <span>${percentage}%</span>
+                        </div>
+                        <div class="performance-bar">
+                            <div class="performance-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            chartHTML += '</div>';
+            chartContainer.innerHTML = chartHTML;
+        }
+
+        function displayRecommendations(data) {
+            const recommendations = document.getElementById('recommendations');
+            const best = data.comparison_data[0];
+            const bestTraditional = data.comparison_data.find(m => m.model_type === 'Traditional ML');
+            const bestDeep = data.comparison_data.find(m => m.model_type === 'Deep Learning');
+
+            recommendations.innerHTML = `
+                <div style="space-y: 15px;">
+                    <div class="insight-item">
+                        <strong><i class="fas fa-trophy"></i> Overall Winner:</strong>
+                        ${best.model_name} with ${best.test_r2} R² score
+                    </div>
+                    <div class="insight-item">
+                        <strong><i class="fas fa-cogs"></i> Best Traditional ML:</strong>
+                        ${bestTraditional ? bestTraditional.model_name : 'N/A'} 
+                        ${bestTraditional ? `(R² ${bestTraditional.test_r2})` : ''}
+                    </div>
+                    <div class="insight-item">
+                        <strong><i class="fas fa-brain"></i> Best Deep Learning:</strong>
+                        ${bestDeep ? bestDeep.model_name : 'N/A'}
+                        ${bestDeep ? `(R² ${bestDeep.test_r2})` : ''}
+                    </div>
+                    <div class="insight-item">
+                        <strong><i class="fas fa-rocket"></i> Production Recommendation:</strong>
+                        For fast inference: ${bestTraditional ? bestTraditional.model_name : 'Ridge Regression'}
+                    </div>
+                    <div class="insight-item">
+                        <strong><i class="fas fa-shield-alt"></i> Overfitting Status:</strong>
+                        ${data.summary.overfitted_count === 0 ? 
+                          '<span class="status-good">✅ All models properly regularized</span>' :
+                          `<span class="status-caution">⚠️ ${data.summary.overfitted_count} model(s) need attention</span>`
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
+        function refreshData() {
+            loadAlgorithmComparison();
+        }
+
+        function showLoading() {
+            document.getElementById('comparisonContent').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading algorithm comparison data...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(loadAlgorithmComparison, 300000);
+    </script>
+</body>
+</html>
