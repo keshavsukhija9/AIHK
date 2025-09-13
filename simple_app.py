@@ -38,13 +38,17 @@ class SimplePredictor:
             sqft = X[i, 0]
             bhk = X[i, 3]
             location = int(X[i, 5])
+            availability = int(X[i, 6])  # 0 = Ready To Move, 1 = Under Construction
             
             # Base price calculation
             base_price = (sqft / 1000) * 45  # Base price per 1000 sqft
             bhk_bonus = bhk * 15             # BHK premium
             location_factor = location_multipliers[location] if location < len(location_multipliers) else 1.0
             
-            price = (base_price + bhk_bonus) * location_factor
+            # FIXED: Ready To Move should be MORE expensive than Under Construction
+            availability_factor = 1.15 if availability == 0 else 0.85  # Ready=1.15, Under Construction=0.85
+            
+            price = (base_price + bhk_bonus) * location_factor * availability_factor
             price += np.random.normal(0, price * 0.1)  # Add some noise
             price = max(20, price)  # Minimum 20 lakhs
             

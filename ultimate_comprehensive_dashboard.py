@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.linear_model import Ridge, Lasso, ElasticNet
+from sklearn.linear_model import Ridge, Lasso, ElasticNet, LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.preprocessing import RobustScaler, LabelEncoder
 from sklearn.neural_network import MLPRegressor
@@ -30,6 +30,7 @@ class UltimateComprehensiveDashboard:
         
         area_types = ['Super built-up Area', 'Plot Area', 'Built-up Area', 'Carpet Area']
         sizes = ['1 BHK', '2 BHK', '3 BHK', '4 BHK', '4+ BHK']
+        availability = ['Ready To Move', 'Under Construction']
         
         data = {
             'area_type': np.random.choice(area_types, n_samples),
@@ -38,6 +39,7 @@ class UltimateComprehensiveDashboard:
             'total_sqft': np.random.lognormal(mean=6.9, sigma=0.6, size=n_samples),
             'bath': np.random.poisson(lam=2, size=n_samples) + 1,
             'balcony': np.random.poisson(lam=1, size=n_samples),
+            'availability': np.random.choice(availability, n_samples, p=[0.7, 0.3]),
         }
         
         data['total_sqft'] = np.clip(data['total_sqft'], 250, 6000)
@@ -59,8 +61,14 @@ class UltimateComprehensiveDashboard:
         }
         
         area_multipliers = {
-            'Super built-up Area': 1.0, 'Plot Area': 1.35, 
+            'Super built-up Area': 1.0, 'Plot Area': 1.35,
             'Built-up Area': 0.82, 'Carpet Area': 0.72
+        }
+        
+        # Fixed availability pricing logic - Ready to Move should be MORE expensive
+        availability_multipliers = {
+            'Ready To Move': 1.15,  # 15% premium for ready properties
+            'Under Construction': 0.85  # 15% discount for under construction
         }
         
         prices = []
@@ -68,6 +76,7 @@ class UltimateComprehensiveDashboard:
             base_price = base_prices[data['size'][i]]
             loc_mult = location_multipliers[data['location'][i]]
             area_mult = area_multipliers[data['area_type'][i]]
+            avail_mult = availability_multipliers[data['availability'][i]]
             
             sqft_factor = (data['total_sqft'][i] / 1000) ** 0.65
             bath_factor = 1 + (data['bath'][i] - 2) * 0.06
@@ -81,9 +90,9 @@ class UltimateComprehensiveDashboard:
             neighborhood_premium = np.random.uniform(0.85, 1.15)
             developer_reputation = np.random.uniform(0.9, 1.1)
             
-            price = (base_price * loc_mult * area_mult * sqft_factor * 
-                    bath_factor * balcony_factor * economic_cycle * 
-                    condition_factor * seasonal_factor * neighborhood_premium * 
+            price = (base_price * loc_mult * area_mult * avail_mult * sqft_factor *
+                    bath_factor * balcony_factor * economic_cycle *
+                    condition_factor * seasonal_factor * neighborhood_premium *
                     developer_reputation + market_volatility)
             
             prices.append(max(18, price))
@@ -93,6 +102,12 @@ class UltimateComprehensiveDashboard:
         df = pd.DataFrame(data)
         df['bhk'] = df['size'].str.extract('(\d+)').astype(int)
         df['price_per_sqft'] = df['price'] * 100000 / df['total_sqft']
+        
+        # Encode availability field
+        df['availability_encoded'] = df['availability'].map({
+            'Ready To Move': 0,
+            'Under Construction': 1
+        })
         
         # Add missing values and outliers
         missing_mask = np.random.random(len(df)) < 0.08
@@ -126,9 +141,7 @@ class UltimateComprehensiveDashboard:
         X_test_scaled = scaler.transform(X_test)
         
         models = {
-            'Ridge Regression': Ridge(alpha=100.0),
-            'Lasso Regression': Lasso(alpha=10.0),
-            'ElasticNet': ElasticNet(alpha=10.0, l1_ratio=0.5),
+            'Linear Regression': LinearRegression(),
             'Random Forest': RandomForestRegressor(
                 n_estimators=25, max_depth=6, min_samples_split=25,
                 min_samples_leaf=15, max_features=0.6, random_state=42
@@ -136,16 +149,6 @@ class UltimateComprehensiveDashboard:
             'Gradient Boosting': GradientBoostingRegressor(
                 n_estimators=25, max_depth=3, learning_rate=0.05,
                 subsample=0.6, max_features=0.6, random_state=42
-            ),
-            'Neural Network (Small)': MLPRegressor(
-                hidden_layer_sizes=(32, 16), alpha=1.0, learning_rate_init=0.001,
-                max_iter=500, early_stopping=True, validation_fraction=0.2,
-                n_iter_no_change=15, random_state=42
-            ),
-            'Neural Network (Medium)': MLPRegressor(
-                hidden_layer_sizes=(64, 32, 16), alpha=0.5, learning_rate_init=0.001,
-                max_iter=500, early_stopping=True, validation_fraction=0.2,
-                n_iter_no_change=15, random_state=42
             ),
             'Neural Network (Deep)': MLPRegressor(
                 hidden_layer_sizes=(128, 64, 32, 16), alpha=0.1, learning_rate_init=0.0005,
@@ -161,7 +164,7 @@ class UltimateComprehensiveDashboard:
             print(f"Evaluating {name}...")
             
             try:
-                if 'Neural Network' in name or name in ['Ridge Regression', 'Lasso Regression', 'ElasticNet']:
+                if 'Neural Network' in name or name in ['Linear Regression']:
                     cv_scores = cross_val_score(model, X_train_scaled, y_train, cv=cv, scoring='r2')
                     model.fit(X_train_scaled, y_train)
                     y_test_pred = model.predict(X_test_scaled)
